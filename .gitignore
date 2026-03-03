@@ -15,17 +15,6 @@ buildNumber.properties
 spring-shell.log
 HELP.md
 
-# Node / npm
-node_modules/
-package-lock.json
-
-# Vaadin generated files
-**/frontend/generated/
-**/src/main/bundles/
-vite.generated.ts
-.editorconfig
-.eslintrc
-
 # IDE - IntelliJ
 .idea/
 *.iws
