@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: poll-service
+server:
+  port: 8081
