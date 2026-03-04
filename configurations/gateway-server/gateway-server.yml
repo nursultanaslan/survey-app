@@ -1,0 +1,28 @@
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: survey-service
+              uri: lb://survey-service
+              predicates:
+                - Path=/api/survey/**
+
+            - id: poll-service
+              uri: lb://poll-service
+              predicates:
+                - Path=/api/poll/**
+
+
+
+# Eureka
+eureka:
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+server:
+  port: 8888
