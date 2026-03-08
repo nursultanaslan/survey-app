@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: survey-service
+
+server:
+  port: 8081

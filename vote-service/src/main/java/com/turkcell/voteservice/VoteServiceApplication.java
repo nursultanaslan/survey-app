@@ -1,11 +1,13 @@
-package com.turkcell.pollservice;
+package com.turkcell.voteservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class PollServiceApplication {
+class VoteServiceApplication {
+
     public static void main(String[] args) {
-        SpringApplication.run(PollServiceApplication.class, args);
+        SpringApplication.run(VoteServiceApplication.class, args);
     }
+
 }

@@ -13,10 +13,11 @@
     <description>Scalable polling/survey platform</description>
 
     <modules>
-        <module>poll-service</module>
         <module>gateway-server</module>
         <module>config-server</module>
         <module>eureka-server</module>
+        <module>survey-service</module>
+        <module>vote-service</module>
     </modules>
 
     <!-- Central Version Control -->
