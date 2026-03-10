@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
+//Value Object
 public record SurveyId(UUID value) implements Serializable {
     public SurveyId {
         Objects.requireNonNull(value, "value must not be null");

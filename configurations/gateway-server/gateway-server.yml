@@ -10,9 +10,9 @@ spring:
                 - Path=/api/survey/**
 
             - id: poll-service
-              uri: lb://poll-service
+              uri: lb://vote-service
               predicates:
-                - Path=/api/poll/**
+                - Path=/api/vote/**
 
 
 
