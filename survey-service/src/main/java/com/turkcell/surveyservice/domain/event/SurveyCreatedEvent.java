@@ -1,4 +1,9 @@
 package com.turkcell.surveyservice.domain.event;
 
-public record SurveyCreatedEvent() {
+import com.turkcell.surveyservice.domain.model.survey.SurveyId;
+import com.turkcell.surveyservice.domain.model.survey.SurveyStatus;
+
+import java.time.Instant;
+
+public record SurveyCreatedEvent(SurveyId id, SurveyStatus status, String title, String description, Instant timestamp) {
 }
