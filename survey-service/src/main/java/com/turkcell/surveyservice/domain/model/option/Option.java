@@ -12,13 +12,13 @@ public class Option {
         this.text = text;
     }
 
-    public void changeText(String newText) {
+    public void changeOptionText(String newText) {
         validateOptionText(text);
         this.text = newText;
     }
 
     public static void validateOptionText(String text) {
-        if (text == null || text.isEmpty()) {
+        if (text == null || text.isBlank()) {
             throw new IllegalArgumentException("Text must not be null or empty");
         }
         if (text.length() < 2) {

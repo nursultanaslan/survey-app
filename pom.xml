@@ -20,6 +20,13 @@
         <module>vote-service</module>
     </modules>
 
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.2</version>
+        <relativePath/>
+    </parent>
+
     <!-- Central Version Control -->
     <properties>
         <java.version>21</java.version>

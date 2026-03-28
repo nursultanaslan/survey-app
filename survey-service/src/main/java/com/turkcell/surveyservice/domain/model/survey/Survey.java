@@ -6,8 +6,8 @@ import com.turkcell.surveyservice.domain.model.question.Question;
 import com.turkcell.surveyservice.domain.model.question.QuestionId;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 //rich survey domain model - aggregate root
 public class Survey {
@@ -34,6 +34,7 @@ public class Survey {
     }
 
     //create -> new object
+    //aggregate oluşturulurken invariant korunur.
     public static Survey create(String title, String description, List<Question> questions) {
         validateTitle(title);
         validateDescription(description);
@@ -73,14 +74,16 @@ public class Survey {
     }
 
     public void addQuestion(String questionText) {
-        checkStatus(status);
+        checkStatus();
+        Question.validateQuestionText(questionText);
+        this.questions.add(new Question(QuestionId.generate(), questionText, new ArrayList<>()));
     }
 
-    public void addOption(UUID questionId, String optionText) {
-        checkStatus(status);
+    public void addOption(QuestionId questionId, String optionText) {
+        checkStatus();
         Question question = questions()
                 .stream()
-                .filter(q -> q.id().equals(new QuestionId(questionId)))
+                .filter(q -> q.id().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
 
@@ -88,15 +91,23 @@ public class Survey {
     }
 
     public void removeQuestion(QuestionId questionId) {
-        questions().removeIf(question -> question.id().equals(questionId));
+        checkStatus();
+        boolean removed = this.questions.removeIf(q -> q.id().equals(questionId));
+        if (!removed) {
+            throw new QuestionNotFoundException("Question not found");
+        }
     }
-
 
     public void removeOption(QuestionId questionId, OptionId optionId) {
+        checkStatus();
+        Question question = questions
+                .stream()
+                .filter(q -> q.id().equals(questionId))
+                .findFirst()
+                .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
 
+        question.removeOption(optionId);
     }
-
-    //TODO: question silindiğinde optionlar da silinir.
 
     public void openSurvey() {
         if (this.status == SurveyStatus.CLOSED) {
@@ -112,18 +123,20 @@ public class Survey {
 
     public void publishSurvey() {
         //kontroller...
-        if (options.size() < 2) {
-            throw new IllegalArgumentException("Question must contain at least 2 options");
+        for (Question question : questions) {
+            if (question.options().size() < 2) {
+                throw new IllegalArgumentException("Question must contain at least 2 options");
+            }
         }
 
-        this.status = SurveyStatus.OPEN;
+        openSurvey();
     }
 
 
     //validate methods-domain invariants
     public static void validateTitle(String title) {
         if (title == null || title.isBlank())
-            throw new IllegalArgumentException("Title cannot be empty");
+            throw new IllegalArgumentException("Title cannot be empty");  //TODO:invalidSurveyTitleException
         if (title.trim().length() > 50) {
             throw new IllegalArgumentException("Title cannot be longer than 50 characters");
         }
@@ -137,8 +150,8 @@ public class Survey {
         }
     }
 
-    public static void checkStatus(SurveyStatus status) {
-        if (status == SurveyStatus.CLOSED) {
+    public void checkStatus() {
+        if (this.status == SurveyStatus.CLOSED) {
             throw new IllegalArgumentException("Kapalı ankette işlem yapılamaz!");
         }
     }
