@@ -5,7 +5,7 @@ import com.turkcell.surveyservice.domain.model.survey.SurveyStatus;
 
 import java.time.Instant;
 
-public record SurveyClosedEvent(
+public record SurveyPublishedEvent(
         SurveyId id,
         SurveyStatus status,
         Instant occurredAt) {

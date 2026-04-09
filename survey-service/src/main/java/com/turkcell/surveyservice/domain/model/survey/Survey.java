@@ -1,12 +1,15 @@
 package com.turkcell.surveyservice.domain.model.survey;
 
-import com.turkcell.surveyservice.domain.exception.QuestionNotFoundException;
+import com.turkcell.surveyservice.domain.event.SurveyClosedEvent;
+import com.turkcell.surveyservice.domain.event.SurveyPublishedEvent;
+import com.turkcell.surveyservice.domain.exception.*;
 import com.turkcell.surveyservice.domain.model.option.OptionId;
 import com.turkcell.surveyservice.domain.model.question.Question;
 import com.turkcell.surveyservice.domain.model.question.QuestionId;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 //rich survey domain model - aggregate root
@@ -66,17 +69,20 @@ public class Survey {
     public void changeTitle(String newTitle) {
         validateTitle(newTitle);
         this.title = newTitle;
+        this.updatedAt = Instant.now();
     }
 
     public void changeDescription(String newDescription) {
         validateDescription(newDescription);
         this.description = newDescription;
+        this.updatedAt = Instant.now();
     }
 
     public void addQuestion(String questionText) {
         checkStatus();
         Question.validateQuestionText(questionText);
         this.questions.add(new Question(QuestionId.generate(), questionText, new ArrayList<>()));
+        this.updatedAt = Instant.now();
     }
 
     public void addOption(QuestionId questionId, String optionText) {
@@ -88,6 +94,7 @@ public class Survey {
                 .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
 
         question.addOption(optionText);
+        this.updatedAt = Instant.now();
     }
 
     public void removeQuestion(QuestionId questionId) {
@@ -96,6 +103,7 @@ public class Survey {
         if (!removed) {
             throw new QuestionNotFoundException("Question not found");
         }
+        this.updatedAt = Instant.now();
     }
 
     public void removeOption(QuestionId questionId, OptionId optionId) {
@@ -107,55 +115,59 @@ public class Survey {
                 .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
 
         question.removeOption(optionId);
+        this.updatedAt = Instant.now();
     }
 
-    public void openSurvey() {
-        if (this.status == SurveyStatus.CLOSED) {
-            this.status = SurveyStatus.OPEN;
-        }
-    }
-
-    public void closeSurvey() {
+    public SurveyClosedEvent closeSurvey() {
         if (this.status == SurveyStatus.OPEN) {
             this.status = SurveyStatus.CLOSED;
         }
+        this.updatedAt = Instant.now();
+        return new SurveyClosedEvent(
+                id,
+                status,
+                Instant.now()
+                );
     }
 
-    public void publishSurvey() {
+    public SurveyPublishedEvent publishSurvey() {
         //kontroller...
         for (Question question : questions) {
             if (question.options().size() < 2) {
-                throw new IllegalArgumentException("Question must contain at least 2 options");
+                throw new InsufficientOptionsException("Question must contain at least 2 options");
             }
         }
-
-        openSurvey();
+        this.status = SurveyStatus.OPEN;
+        this.updatedAt = Instant.now();
+        return new SurveyPublishedEvent(
+                id,
+                status,
+                Instant.now());
     }
 
+    public void checkStatus() {
+        if (this.status != SurveyStatus.DRAFT) {
+            throw new InvalidSurveyStatusException("Ankette işlem yapılamaz!");
+        }
+        this.updatedAt = Instant.now();
+    }
 
     //validate methods-domain invariants
     public static void validateTitle(String title) {
         if (title == null || title.isBlank())
-            throw new IllegalArgumentException("Title cannot be empty");  //TODO:invalidSurveyTitleException
+            throw new InvalidTitleException("Survey title cannot be empty");
         if (title.trim().length() > 50) {
-            throw new IllegalArgumentException("Title cannot be longer than 50 characters");
+            throw new InvalidTitleException("Survey title cannot be longer than 50 characters");
         }
     }
 
     public static void validateDescription(String description) {
         if (description == null || description.isBlank())
-            throw new IllegalArgumentException("Description cannot be empty");
+            throw new InvalidDescriptionException("Description cannot be empty");
         if (description.length() > 255) {
-            throw new IllegalArgumentException("Description cannot be longer than 255 characters");
+            throw new InvalidDescriptionException("Description cannot be longer than 255 characters");
         }
     }
-
-    public void checkStatus() {
-        if (this.status == SurveyStatus.CLOSED) {
-            throw new IllegalArgumentException("Kapalı ankette işlem yapılamaz!");
-        }
-    }
-
 
 
     //getters
@@ -176,7 +188,7 @@ public class Survey {
     }
 
     public List<Question> questions() {
-        return questions;
+        return Collections.unmodifiableList(questions);
     }
 
     public Instant createdAt() {

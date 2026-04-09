@@ -1,0 +1,9 @@
+server:
+  port: 8081
+
+
+# Eureka
+eureka:
+  client:
+    fetch-registry: true
+    register-with-eureka: true

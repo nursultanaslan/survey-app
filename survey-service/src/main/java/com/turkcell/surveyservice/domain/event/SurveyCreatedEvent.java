@@ -5,5 +5,10 @@ import com.turkcell.surveyservice.domain.model.survey.SurveyStatus;
 
 import java.time.Instant;
 
-public record SurveyCreatedEvent(SurveyId id, SurveyStatus status, String title, String description, Instant timestamp) {
+public record SurveyCreatedEvent(
+        SurveyId id,
+        SurveyStatus status,
+        String title,
+        String description,
+        Instant occurredAt) {
 }

@@ -1,5 +1,7 @@
 package com.turkcell.surveyservice.domain.model.option;
 
+import com.turkcell.surveyservice.domain.exception.InvalidOptionTextException;
+
 //child entity
 public class Option {
 
@@ -13,19 +15,19 @@ public class Option {
     }
 
     public void changeOptionText(String newText) {
-        validateOptionText(text);
+        validateOptionText(newText);
         this.text = newText;
     }
 
     public static void validateOptionText(String text) {
         if (text == null || text.isBlank()) {
-            throw new IllegalArgumentException("Text must not be null or empty");
+            throw new InvalidOptionTextException("Text must not be null or empty");
         }
         if (text.length() < 2) {
-            throw new IllegalArgumentException("Text must have at least 2 characters");
+            throw new InvalidOptionTextException("Text must have at least 2 characters");
         }
         if (text.length() > 50) {
-            throw new IllegalArgumentException("Text must have at most 50 characters");
+            throw new InvalidOptionTextException("Text must have at most 50 characters");
         }
     }
 

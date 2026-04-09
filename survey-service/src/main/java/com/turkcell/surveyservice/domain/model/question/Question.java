@@ -1,9 +1,11 @@
 package com.turkcell.surveyservice.domain.model.question;
 
+import com.turkcell.surveyservice.domain.exception.DuplicateOptionTextException;
 import com.turkcell.surveyservice.domain.exception.OptionLimitExceededException;
 import com.turkcell.surveyservice.domain.model.option.Option;
 import com.turkcell.surveyservice.domain.model.option.OptionId;
 
+import java.util.Collections;
 import java.util.List;
 
 //child entity
@@ -23,11 +25,22 @@ public class Question {
     //domain behaviors
     public void addOption(String text) {
         checkOptionSize(options);
+        checkDuplicateOption(text);
         options.add(new Option(OptionId.generate(), text));
     }
 
     public void removeOption(OptionId optionId) {
         options.removeIf(option -> option.id().equals(optionId));
+    }
+
+
+    //aynı question içerisinde duplicate option olamaz.
+    public void checkDuplicateOption(String optionText) {
+        for (Option option : options){
+            if (option.text().equalsIgnoreCase(optionText)) {
+                throw new DuplicateOptionTextException("Duplicate option text: " + optionText);
+            }
+        }
     }
 
     //domain invariants-iş kuralı
@@ -45,11 +58,6 @@ public class Question {
         }
     }
 
-    //aynı question içerisinde duplicate option olamaz.
-    public static void checkDuplicateOption(String optionText) {
-
-    }
-
 
     //getters
     public QuestionId id() {
@@ -61,6 +69,6 @@ public class Question {
     }
 
     public List<Option> options() {
-        return options;
+        return Collections.unmodifiableList(options);
     }
 }

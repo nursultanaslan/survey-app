@@ -1,6 +1,7 @@
 spring:
   application:
     name: survey-service
-
-server:
-  port: 8081
+  profiles:
+    active: dev
+  config:
+    import: configserver:http://localhost:8787
