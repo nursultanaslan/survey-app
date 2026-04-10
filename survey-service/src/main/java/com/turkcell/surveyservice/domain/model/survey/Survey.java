@@ -3,7 +3,6 @@ package com.turkcell.surveyservice.domain.model.survey;
 import com.turkcell.surveyservice.domain.event.SurveyClosedEvent;
 import com.turkcell.surveyservice.domain.event.SurveyPublishedEvent;
 import com.turkcell.surveyservice.domain.exception.*;
-import com.turkcell.surveyservice.domain.model.option.OptionId;
 import com.turkcell.surveyservice.domain.model.question.Question;
 import com.turkcell.surveyservice.domain.model.question.QuestionId;
 
@@ -25,19 +24,21 @@ public class Survey {
     private Instant createdAt;
     private Instant updatedAt;
 
-    //controlled constructor
-    private Survey(SurveyId id, String title, String description, SurveyStatus status, List<Question> questions, Instant createdAt, Instant updatedAt) {
+    // controlled constructor
+    private Survey(SurveyId id, String title, String description,
+            SurveyStatus status, List<Question> questions,
+            Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.status = status;
-        this.questions = questions;
+        this.questions = new ArrayList<>(questions);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    //create -> new object
-    //aggregate oluşturulurken invariant korunur.
+    // create -> new object
+    // aggregate oluşturulurken invariant korunur.
     public static Survey create(String title, String description, List<Question> questions) {
         validateTitle(title);
         validateDescription(description);
@@ -48,12 +49,12 @@ public class Survey {
                 SurveyStatus.getDefault(),
                 questions,
                 Instant.now(),
-                null
-                );
+                null);
     }
 
-    //rehydrate -> existing object
-    public static Survey rehydrate(SurveyId id, String title, String description, SurveyStatus status, List<Question> questions, Instant createdAt, Instant updatedAt) {
+    // rehydrate -> existing object
+    public static Survey rehydrate(SurveyId id, String title, String description, SurveyStatus status,
+            List<Question> questions, Instant createdAt, Instant updatedAt) {
         return new Survey(
                 id,
                 title,
@@ -61,11 +62,10 @@ public class Survey {
                 status,
                 questions,
                 createdAt,
-                updatedAt
-        );
+                updatedAt);
     }
 
-    //worker methods-domain behaviors
+    // worker methods-domain behaviors
     public void changeTitle(String newTitle) {
         validateTitle(newTitle);
         this.title = newTitle;
@@ -80,7 +80,6 @@ public class Survey {
 
     public void addQuestion(String questionText) {
         checkStatus();
-        Question.validateQuestionText(questionText);
         this.questions.add(new Question(QuestionId.generate(), questionText, new ArrayList<>()));
         this.updatedAt = Instant.now();
     }
@@ -99,14 +98,14 @@ public class Survey {
 
     public void removeQuestion(QuestionId questionId) {
         checkStatus();
-        boolean removed = this.questions.removeIf(q -> q.id().equals(questionId));
+        boolean removed = questions.removeIf(question -> question.id().equals(questionId));
         if (!removed) {
             throw new QuestionNotFoundException("Question not found");
         }
         this.updatedAt = Instant.now();
     }
 
-    public void removeOption(QuestionId questionId, OptionId optionId) {
+    public void removeOption(QuestionId questionId, String optionText) {
         checkStatus();
         Question question = questions
                 .stream()
@@ -114,30 +113,35 @@ public class Survey {
                 .findFirst()
                 .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
 
-        question.removeOption(optionId);
+        question.removeOption(optionText);
         this.updatedAt = Instant.now();
     }
 
     public SurveyClosedEvent closeSurvey() {
         if (this.status == SurveyStatus.OPEN) {
             this.status = SurveyStatus.CLOSED;
+        } else {
+            throw new InvalidSurveyStatusException("Anket kapatılamaz!");
         }
         this.updatedAt = Instant.now();
         return new SurveyClosedEvent(
                 id,
                 status,
-                Instant.now()
-                );
+                Instant.now());
     }
 
     public SurveyPublishedEvent publishSurvey() {
-        //kontroller...
+        // kontroller...
         for (Question question : questions) {
             if (question.options().size() < 2) {
                 throw new InsufficientOptionsException("Question must contain at least 2 options");
             }
         }
-        this.status = SurveyStatus.OPEN;
+        if (this.status == SurveyStatus.DRAFT) {
+            this.status = SurveyStatus.OPEN;
+        } else {
+            throw new InvalidSurveyStatusException("Yalnızca DRAFT durumundaki anketler yayınlanabilir.");
+        }
         this.updatedAt = Instant.now();
         return new SurveyPublishedEvent(
                 id,
@@ -149,10 +153,9 @@ public class Survey {
         if (this.status != SurveyStatus.DRAFT) {
             throw new InvalidSurveyStatusException("Ankette işlem yapılamaz!");
         }
-        this.updatedAt = Instant.now();
     }
 
-    //validate methods-domain invariants
+    // validate methods-domain invariants
     public static void validateTitle(String title) {
         if (title == null || title.isBlank())
             throw new InvalidTitleException("Survey title cannot be empty");
@@ -169,8 +172,7 @@ public class Survey {
         }
     }
 
-
-    //getters
+    // getters
     public SurveyId id() {
         return id;
     }
