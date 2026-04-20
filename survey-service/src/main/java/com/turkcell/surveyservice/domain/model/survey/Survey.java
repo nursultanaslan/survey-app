@@ -3,6 +3,7 @@ package com.turkcell.surveyservice.domain.model.survey;
 import com.turkcell.surveyservice.domain.event.SurveyClosedEvent;
 import com.turkcell.surveyservice.domain.event.SurveyPublishedEvent;
 import com.turkcell.surveyservice.domain.exception.*;
+import com.turkcell.surveyservice.domain.model.option.OptionId;
 import com.turkcell.surveyservice.domain.model.question.Question;
 import com.turkcell.surveyservice.domain.model.question.QuestionId;
 
@@ -26,8 +27,8 @@ public class Survey {
 
     // controlled constructor
     private Survey(SurveyId id, String title, String description,
-            SurveyStatus status, List<Question> questions,
-            Instant createdAt, Instant updatedAt) {
+                   SurveyStatus status, List<Question> questions,
+                   Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -54,7 +55,7 @@ public class Survey {
 
     // rehydrate -> existing object
     public static Survey rehydrate(SurveyId id, String title, String description, SurveyStatus status,
-            List<Question> questions, Instant createdAt, Instant updatedAt) {
+                                   List<Question> questions, Instant createdAt, Instant updatedAt) {
         return new Survey(
                 id,
                 title,
@@ -66,26 +67,30 @@ public class Survey {
     }
 
     // worker methods-domain behaviors
+    //nesneyi değiştiriyor instance
     public void changeTitle(String newTitle) {
         validateTitle(newTitle);
         this.title = newTitle;
         this.updatedAt = Instant.now();
     }
 
+    //nesneyi değiştiriyor -> instance
     public void changeDescription(String newDescription) {
         validateDescription(newDescription);
         this.description = newDescription;
         this.updatedAt = Instant.now();
     }
 
+    //nesneyi değiştiriyor -> instance
     public void addQuestion(String questionText) {
-        checkStatus();
+        checkSurveyStatus();
         this.questions.add(new Question(QuestionId.generate(), questionText, new ArrayList<>()));
         this.updatedAt = Instant.now();
     }
 
+    //nesneyi değiştiriyor -> instance
     public void addOption(QuestionId questionId, String optionText) {
-        checkStatus();
+        checkSurveyStatus();
         Question question = questions()
                 .stream()
                 .filter(q -> q.id().equals(questionId))
@@ -96,8 +101,9 @@ public class Survey {
         this.updatedAt = Instant.now();
     }
 
+    //nesneyi değiştiriyor -> instance
     public void removeQuestion(QuestionId questionId) {
-        checkStatus();
+        checkSurveyStatus();
         boolean removed = questions.removeIf(question -> question.id().equals(questionId));
         if (!removed) {
             throw new QuestionNotFoundException("Question not found");
@@ -105,43 +111,32 @@ public class Survey {
         this.updatedAt = Instant.now();
     }
 
-    public void removeOption(QuestionId questionId, String optionText) {
-        checkStatus();
+    //nesneyi değiştiriyor -> instance
+    public void removeOption(QuestionId questionId, OptionId optionId) {
+        checkSurveyStatus();
         Question question = questions
                 .stream()
                 .filter(q -> q.id().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new QuestionNotFoundException("Question not found"));
 
-        question.removeOption(optionText);
+        question.removeOption(optionId);
         this.updatedAt = Instant.now();
     }
 
-    public SurveyClosedEvent closeSurvey() {
-        if (this.status == SurveyStatus.OPEN) {
-            this.status = SurveyStatus.CLOSED;
-        } else {
-            throw new InvalidSurveyStatusException("Anket kapatılamaz!");
-        }
-        this.updatedAt = Instant.now();
-        return new SurveyClosedEvent(
-                id,
-                status,
-                Instant.now());
-    }
-
+    //nesneyi değiştiriyor -> instance
     public SurveyPublishedEvent publishSurvey() {
         // kontroller...
-        for (Question question : questions) {
-            if (question.options().size() < 2) {
-                throw new InsufficientOptionsException("Question must contain at least 2 options");
-            }
-        }
         if (this.status == SurveyStatus.DRAFT) {
             this.status = SurveyStatus.OPEN;
         } else {
             throw new InvalidSurveyStatusException("Yalnızca DRAFT durumundaki anketler yayınlanabilir.");
         }
+        if (questions.isEmpty()) {
+            throw new InsufficientQuestionException("Yayınlanacak ankette en az 1 soru bulunmalıdır.");
+        }
+        questions.forEach(Question::ensurePublishable);
+
         this.updatedAt = Instant.now();
         return new SurveyPublishedEvent(
                 id,
@@ -149,10 +144,19 @@ public class Survey {
                 Instant.now());
     }
 
-    public void checkStatus() {
-        if (this.status != SurveyStatus.DRAFT) {
-            throw new InvalidSurveyStatusException("Ankette işlem yapılamaz!");
+    public SurveyClosedEvent closeSurvey() {
+        if (this.status == SurveyStatus.OPEN) {
+            this.status = SurveyStatus.CLOSED;
+        } else {
+            throw new InvalidSurveyStatusException("Yalnızca OPEN durumundaki anketler kapatılabilir" +
+                    "Mevcut Durum: " + this.status.name()
+            );
         }
+        this.updatedAt = Instant.now();
+        return new SurveyClosedEvent(
+                id,
+                status,
+                Instant.now());
     }
 
     // validate methods-domain invariants
@@ -169,6 +173,13 @@ public class Survey {
             throw new InvalidDescriptionException("Description cannot be empty");
         if (description.length() > 255) {
             throw new InvalidDescriptionException("Description cannot be longer than 255 characters");
+        }
+    }
+
+    //helper method
+    private void checkSurveyStatus() {
+        if (this.status != SurveyStatus.DRAFT) {
+            throw new InvalidSurveyStatusException("Ankette işlem yapılamaz!");
         }
     }
 
